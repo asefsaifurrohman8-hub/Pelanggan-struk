@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>DEAR LOVE - Pelanggan</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
+
+    <style>
+        :root { --primary: #103d81; --bg: #f0f4f8; }
+        body { margin: 0; background: var(--primary); font-family: 'Poppins', sans-serif; min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px; }
+        
+        .app-container { width: 100%; max-width: 400px; text-align: center; }
+
+        /* LOADING */
+        #loading { color: white; animation: pulse 1.5s infinite; }
+        
+        /* STANDBY STATE */
+        .brand-logo-large { animation: fadeIn 1s; }
+        .logo-box { 
+            width: 150px; padding: 20px; background: white; border-radius: 20px; 
+            display:flex; align-items:center; justify-content:center; margin: 0 auto 30px auto; 
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2); 
+        }
+        .logo-box img { width: 100%; height: auto; }
+        
+        /* CARD STRUK */
+        .receipt-card {
+            background: white; border-radius: 30px; padding: 40px 30px;
+            box-shadow: 0 25px 60px rgba(0,0,0,0.3);
+            display: none; animation: slideUp 0.6s cubic-bezier(0.2, 0.8, 0.2, 1);
+            position: relative;
+        }
+        .icon-check {
+            width: 80px; height: 80px; background: #dcfce7; color: #166534;
+            border-radius: 50%; display: flex; align-items: center; justify-content: center;
+            margin: -70px auto 20px auto; border: 8px solid var(--primary);
+        }
+        
+        .shop-name { font-size: 20px; font-weight: 800; color: #103d81; letter-spacing: 0.5px; margin-bottom: 5px; }
+        .sub-shop { font-size: 11px; color: #64748b; font-weight: 500; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 20px; }
+        
+        .trx-date { font-size: 12px; color: #94a3b8; margin-bottom: 25px; padding-bottom: 15px; border-bottom: 1px dashed #e2e8f0; }
+
+        .amount-box { background: #f8fafc; border: 2px dashed #cbd5e1; border-radius: 20px; padding: 25px; margin-bottom: 30px; }
+        .amount-val { font-size: 36px; font-weight: 800; color: var(--primary); letter-spacing: -1px; }
+        .liter-val { font-size: 15px; color: #64748b; font-weight: 600; margin-top: 5px; }
+
+        .btn-download {
+            width: 100%; padding: 18px; border: none; border-radius: 16px;
+            background: linear-gradient(135deg, #103d81 0%, #1e40af 100%);
+            color: white; font-weight: 700;
+            cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 10px;
+            font-size: 15px; box-shadow: 0 10px 25px rgba(16, 61, 129, 0.3); transition: 0.2s;
+        }
+        .btn-download:active { transform: scale(0.96); }
+
+        #canvas { display: none; }
+        @keyframes pulse { 0% { opacity: 0.6; } 50% { opacity: 1; } 100% { opacity: 0.6; } }
+        @keyframes slideUp { from { transform: translateY(40px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    </style>
+</head>
+<body>
+
+    <div class="app-container">
+        <!-- Loading -->
+        <div id="loading">
+            <span class="material-icons-round" style="font-size: 56px;">cloud_sync</span>
+            <p style="margin-top: 15px; font-size: 14px; font-weight: 500;">Menghubungkan ke Server...</p>
+        </div>
+
+        <!-- Tampilan Struk -->
+        <div id="receiptUI" class="receipt-card">
+            <div class="icon-check"><span class="material-icons-round" style="font-size: 48px;">check</span></div>
+            
+            <h2 class="shop-name">DEAR LOVE</h2>
+            <div class="sub-shop">Mini Gas Station</div>
+            
+            <p class="trx-date" id="txtWaktu">-</p>
+            
+            <div class="amount-box">
+                <div class="amount-val" id="txtTotal">Rp 0</div>
+                <div class="liter-val" id="txtLiter">0 Liter Pertalite</div>
+            </div>
+            
+            <button class="btn-download" onclick="downloadStruk()">
+                <span class="material-icons-round">download</span> Simpan Struk
+            </button>
+            <p style="margin-top: 25px; font-size: 11px; color: #cbd5e1; font-weight: 500;">Terima kasih atas kunjungan Anda</p>
+        </div>
+
+        <!-- Pesan Kosong / Standby -->
+        <div id="emptyState" style="display:none; color:white;">
+            <div class="brand-logo-large">
+                <div class="logo-box">
+                    <img src="logo.png" alt="dear love">
+                </div>
+                <h2 style="font-size: 24px; font-weight: 800; margin: 0; letter-spacing: 1px;">DEAR LOVE</h2>
+                <p style="font-size: 12px; opacity: 0.8; margin-top: 5px;">Automatic Mini Gas Station</p>
+            </div>
+            
+            <div style="background: rgba(255,255,255,0.1); border-radius: 16px; padding: 20px; backdrop-filter: blur(10px); max-width: 280px; margin: 0 auto;">
+                <h3 style="margin: 0 0 5px 0; font-size: 16px;">Siap Melayani</h3>
+                <p style="font-size:12px; opacity:0.8; margin: 0;">Menunggu data transaksi dari admin...</p>
+            </div>
+        </div>
+    </div>
+    <canvas id="canvas" width="350" height="550"></canvas>
+
+    <!-- FIREBASE SCRIPT -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js";
+        import { getFirestore, doc, onSnapshot } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js";
+
+        // FIREBASE CONFIG
+        const firebaseConfig = {
+            apiKey: "AIzaSyBpwNPIYhelOhkPvJsBmKvlZnaH9FVnmM4",
+            authDomain: "pom-mini-50b1e.firebaseapp.com",
+            databaseURL: "https://pom-mini-50b1e-default-rtdb.asia-southeast1.firebasedatabase.app",
+            projectId: "pom-mini-50b1e",
+            storageBucket: "pom-mini-50b1e.firebasestorage.app",
+            messagingSenderId: "77499696502",
+            appId: "1:77499696502:web:8080c37da62a12c9566657",
+            measurementId: "G-KRRHTTGBRF"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        window.currentData = null;
+
+        onSnapshot(doc(db, "struk_public", "current"), (doc) => {
+            document.getElementById('loading').style.display = 'none';
+            if (doc.exists()) {
+                const data = doc.data();
+                window.currentData = data;
+                renderStruk(data);
+            } else {
+                document.getElementById('emptyState').style.display = 'block';
+                document.getElementById('receiptUI').style.display = 'none';
+            }
+        });
+
+        function renderStruk(data) {
+            document.getElementById('emptyState').style.display = 'none';
+            document.getElementById('receiptUI').style.display = 'block';
+            document.getElementById('txtTotal').innerText = "Rp " + parseInt(data.nominal).toLocaleString("id-ID");
+            document.getElementById('txtLiter').innerText = data.liter + " Liter"; 
+            document.getElementById('txtWaktu').innerText = data.waktu;
+        }
+
+        window.downloadStruk = function() {
+            if(!window.currentData) return;
+            const d = window.currentData;
+            const canvas = document.getElementById('canvas');
+            const ctx = canvas.getContext('2d');
+            
+            ctx.fillStyle = '#ffffff'; ctx.fillRect(0,0,350,550);
+            ctx.fillStyle = '#000000'; const cx = 175; let y = 50;
+            
+            // Header Struk
+            ctx.font = 'bold 24px monospace'; ctx.textAlign = 'center';
+            ctx.fillStyle = '#103d81';
+            ctx.fillText("DEAR LOVE", cx, y); y += 25;
+            ctx.font = '12px monospace'; ctx.fillStyle = '#000000';
+            ctx.fillText("Mini Gas Station", cx, y); y += 40;
+            
+            ctx.fillText("--------------------------------", cx, y); y += 30;
+            ctx.textAlign = 'left'; ctx.fillText("TGL : " + d.waktu, 20, y); y += 40;
+            ctx.font = 'bold 16px monospace'; ctx.fillText("BBM PERTALITE", 20, y); y += 25;
+            ctx.font = '16px monospace'; ctx.fillText(d.liter + " x 10.000", 20, y); 
+            ctx.textAlign = 'right'; ctx.fillText("Rp " + parseInt(d.nominal).toLocaleString("id-ID"), 330, y); y += 30;
+            ctx.textAlign = 'center'; ctx.fillText("--------------------------------", cx, y); y += 30;
+            ctx.font = 'bold 24px monospace'; ctx.textAlign = 'left'; ctx.fillText("TOTAL", 20, y);
+            ctx.textAlign = 'right'; ctx.fillText("Rp " + parseInt(d.nominal).toLocaleString("id-ID"), 330, y); y += 60;
+            ctx.textAlign = 'center'; ctx.font = '14px monospace'; ctx.fillText("TERIMA KASIH", cx, y); y += 25; ctx.fillText("SELAMAT JALAN", cx, y);
+
+            const link = document.createElement('a');
+            link.download = `Struk-${Date.now()}.png`;
+            link.href = canvas.toDataURL();
+            link.click();
+        }
+    </script>
+</body>
+</html>
+
+
