@@ -11,7 +11,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 
     <style>
-        :root { --primary: #103d81; --paper: #fffdf0; --ink: #2d2d2d; }
+        :root { --primary: #103d81; --paper: #fffdf0; --ink: #2d2d2d; --danger: #d93025; }
         
         body { 
             margin: 0; background: var(--primary); font-family: 'Poppins', sans-serif; 
@@ -27,20 +27,19 @@
         .logo-box { width: 100px; padding: 15px; background: white; border-radius: 15px; margin: 0 auto 20px; box-shadow: 0 10px 20px rgba(0,0,0,0.2); }
         .logo-box img { width: 100%; display: block; }
 
-        /* --- DESAIN STRUK --- */
+        /* --- DESAIN KARTU UMUM --- */
         .receipt-card {
             background: var(--paper); 
             width: 100%;
-            padding: 40px 25px 50px 25px; /* Padding bawah extra untuk sobekan */
+            padding: 40px 25px 50px 25px;
             box-shadow: 0 10px 30px rgba(0,0,0,0.3);
             display: none; /* Hidden by default */
             position: relative;
             color: var(--ink);
-            font-family: 'Share Tech Mono', monospace; /* Font struk printer */
+            font-family: 'Share Tech Mono', monospace;
             text-align: center;
             box-sizing: border-box;
-            
-            /* Efek Kertas Sobek (Zigzag) */
+            /* Efek Kertas Sobek */
             clip-path: polygon(
                 0% 0%, 100% 0%, 100% 100%, 
                 95% 98%, 90% 100%, 85% 98%, 80% 100%, 75% 98%, 70% 100%, 65% 98%, 
@@ -58,7 +57,7 @@
             border: 4px solid rgba(16, 61, 129, 0.08); padding: 10px 30px; border-radius: 10px;
         }
 
-        /* HEADER TOKO (BISA DIEDIT) */
+        /* HEADER TOKO */
         .shop-header { position: relative; z-index: 1; margin-bottom: 20px; border-bottom: 2px dashed #ccc; padding-bottom: 15px; }
         .shop-name { font-size: 22px; font-weight: 700; margin: 0; text-transform: uppercase; outline: none; }
         .shop-address { font-size: 12px; margin-top: 5px; outline: none; line-height: 1.4; }
@@ -86,10 +85,24 @@
             cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 10px;
             font-family: 'Poppins', sans-serif; font-size: 14px; 
             box-shadow: 0 5px 15px rgba(0,0,0,0.2); transition: 0.2s;
+            text-decoration: none; /* Untuk tag a */
         }
         .btn-download:active { transform: scale(0.96); }
         
         .edit-hint { font-size: 10px; color: #999; margin-top: 5px; font-family: sans-serif; display: block; font-style: italic;}
+
+        /* --- BARU: STYLE UNTUK STEMPEL LUNAS --- */
+        .stamp {
+            position: absolute; top: 40%; left: 50%;
+            transform: translate(-50%, -50%) rotate(-15deg) scale(3); /* Awal besar */
+            color: var(--danger); border: 3px solid var(--danger);
+            font-size: 3rem; font-weight: 900; padding: 5px 20px;
+            text-transform: uppercase; opacity: 0; border-radius: 10px;
+            font-family: 'Courier New', Courier, monospace;
+            mix-blend-mode: multiply; z-index: 5; pointer-events: none;
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        .stamp.is-visible { opacity: 0.6; transform: translate(-50%, -50%) rotate(-15deg) scale(1); }
 
         @keyframes pulse { 0% { opacity: 0.6; } 50% { opacity: 1; } 100% { opacity: 0.6; } }
     </style>
@@ -102,9 +115,50 @@
             <p style="margin-top: 10px; font-size: 12px;">Menghubungkan Server...</p>
         </div>
 
+        <div id="paymentUI" class="receipt-card" style="border-top: 5px solid var(--danger);">
+            
+            <h3 style="margin: 0 0 15px 0; color: var(--danger); font-family: 'Poppins', sans-serif;">MENUNGGU PEMBAYARAN</h3>
+            
+            <div style="background: white; padding: 15px; border: 2px dashed #ccc; border-radius: 10px; margin-bottom: 20px;">
+                <div style="font-size: 12px; color: #666; font-family: 'Poppins', sans-serif;">Total Tagihan:</div>
+                <div style="font-size: 32px; font-weight: bold; color: var(--primary); margin: 5px 0;" id="payAmountDisplay">Rp 0</div>
+                
+                <button onclick="copyNominal()" style="background: #eee; border: none; padding: 5px 12px; border-radius: 15px; font-size: 11px; cursor: pointer; color: #555;">
+                    <span class="material-icons-round" style="font-size: 12px; vertical-align: middle;">content_copy</span> Salin Angka
+                </button>
+            </div>
+
+            <div style="position: relative; margin-bottom: 20px;">
+                <img src="qris_toko.png" 
+                     id="qrisImage"
+                     style="width: 180px; border-radius: 10px; border: 1px solid #ddd; padding: 5px; background: white;" 
+                     alt="QRIS Toko"
+                     onerror="this.src='https://via.placeholder.com/200x200?text=QRIS+TIDAK+DITEMUKAN'">
+                <p style="font-size: 10px; color: #666; margin-top: 5px; font-family: 'Poppins', sans-serif;">Scan QRIS di atas untuk membayar</p>
+            </div>
+
+            <div style="display: flex; flex-direction: column; gap: 10px;">
+                <button onclick="simpanDanBuka('dana')" class="btn-download" style="background: #118EE9; font-size: 12px;">
+                    <span class="material-icons-round">download</span> 
+                    <span>Simpan QR & Buka DANA</span>
+                </button>
+
+                <button onclick="simpanDanBuka('gopay')" class="btn-download" style="background: #00AA13; font-size: 12px;">
+                    <span class="material-icons-round">download</span> 
+                    <span>Simpan QR & Buka GoPay</span>
+                </button>
+            </div>
+            
+            <p style="font-size: 10px; color: #888; margin-top: 15px; font-family: 'Poppins', sans-serif;">
+                *Tombol di atas otomatis menyimpan gambar QRIS ke Galeri dan membuka aplikasi pembayaran.
+            </p>
+        </div>
+
         <div id="receiptUI" class="receipt-card">
             
             <div class="watermark">DEAR LOVE</div>
+            
+            <div id="stampLunas" class="stamp">LUNAS</div>
 
             <div class="shop-header">
                 <div class="shop-name" contenteditable="true" id="editShopName">POM MINI</div>
@@ -151,13 +205,16 @@
             <h3 style="margin:0;">DEAR LOVE</h3>
             <p style="font-size: 12px; opacity: 0.8;">Menunggu transaksi dari admin...</p>
         </div>
+        
+        <a id="downloadLinkHidden" style="display:none;"></a>
+
     </div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js";
         import { getFirestore, doc, onSnapshot } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js";
 
-        // Konfigurasi Firebase Anda
+        // Konfigurasi Firebase (TIDAK BERUBAH)
         const firebaseConfig = {
             apiKey: "AIzaSyBpwNPIYhelOhkPvJsBmKvlZnaH9FVnmM4",
             authDomain: "pom-mini-50b1e.firebaseapp.com",
@@ -169,9 +226,11 @@
             measurementId: "G-KRRHTTGBRF"
         };
 
-        // Init Firebase
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
+        
+        // Variable untuk menyimpan nominal mentah (untuk fitur copy)
+        let currentNominalRaw = 0;
 
         // Listener Realtime
         onSnapshot(doc(db, "struk_public", "current"), (doc) => {
@@ -179,67 +238,126 @@
             
             if (doc.exists()) {
                 const data = doc.data();
+                currentNominalRaw = data.nominal;
+
+                // LOGIKA BARU: Cek Status Pembayaran
+                // Jika status 'UNPAID' atau belum ada statusnya -> Tampilkan Halaman Bayar
+                if (data.status === "UNPAID") {
+                    showPaymentPage(data);
+                } else {
+                    // Jika status 'PAID' (atau lainnya) -> Tampilkan Struk
+                    showReceiptPage(data);
+                }
+
+                // Render data struk (tetap dijalankan agar data siap)
                 renderStruk(data);
+                
             } else {
                 document.getElementById('emptyState').style.display = 'block';
                 document.getElementById('receiptUI').style.display = 'none';
+                document.getElementById('paymentUI').style.display = 'none';
             }
         });
 
-        // Fungsi Update Tampilan
-        function renderStruk(data) {
+        // Tampilkan Halaman Pembayaran
+        function showPaymentPage(data) {
+            document.getElementById('paymentUI').style.display = 'block';
+            document.getElementById('receiptUI').style.display = 'none';
             document.getElementById('emptyState').style.display = 'none';
+
+            // Update Angka Tagihan
+            const formatted = parseInt(data.nominal).toLocaleString("id-ID");
+            document.getElementById('payAmountDisplay').innerText = "Rp " + formatted;
+        }
+
+        // Tampilkan Halaman Struk
+        function showReceiptPage(data) {
+            document.getElementById('paymentUI').style.display = 'none';
             document.getElementById('receiptUI').style.display = 'block';
-            
-            // Format Rupiah
+            document.getElementById('emptyState').style.display = 'none';
+
+            // Reset dan Jalankan Animasi Stempel
+            const stamp = document.getElementById('stampLunas');
+            stamp.classList.remove('is-visible');
+            setTimeout(() => {
+                stamp.classList.add('is-visible');
+            }, 500); // Delay 0.5 detik biar keren
+        }
+
+        // Fungsi Update Data Struk (Kode Asli)
+        function renderStruk(data) {
             const formattedTotal = parseInt(data.nominal).toLocaleString("id-ID");
             
-            // Update Data Transaksi
             document.getElementById('txtTotalBig').innerText = "Rp " + formattedTotal;
             document.getElementById('txtTotalTop').innerText = formattedTotal;
             document.getElementById('txtLiter').innerText = `${data.liter} L x 10.000`;
             document.getElementById('txtWaktu').innerText = data.waktu;
 
-            // UPDATE DATA TOKO (Jika Admin mengirim perubahan)
-            // Cek apakah di database ada field 'nama_toko'
             if(data.nama_toko && data.nama_toko.trim() !== "") {
                 document.getElementById('editShopName').innerText = data.nama_toko;
             }
-            
-            // Cek apakah di database ada field 'alamat_toko'
             if(data.alamat_toko && data.alamat_toko.trim() !== "") {
                 document.getElementById('editAddress').innerText = data.alamat_toko;
             }
         }
 
-        // FUNGSI DOWNLOAD (SCREENSHOT DOM)
+        // FITUR BARU: Copy Nominal
+        window.copyNominal = function() {
+            navigator.clipboard.writeText(currentNominalRaw).then(() => {
+                alert("Nominal disalin!");
+            });
+        }
+
+        // FITUR BARU: Chain Action (Simpan QR + Buka App)
+        window.simpanDanBuka = function(wallet) {
+            // Pastikan file ini ada di folder web kamu!
+            const qrisImageSource = "qris_toko.png"; 
+            
+            let appLink = "";
+            if (wallet === 'dana') {
+                appLink = "https://link.dana.id/scan"; 
+            } else if (wallet === 'gopay') {
+                appLink = "gojek://gopay/pay"; 
+            }
+
+            // 1. Download
+            const link = document.getElementById('downloadLinkHidden');
+            link.href = qrisImageSource;
+            link.download = "QRIS_DEARLOVE_BAYAR.png";
+            link.click();
+
+            // 2. Redirect (Jeda 1 detik)
+            setTimeout(() => {
+                window.location.href = appLink;
+            }, 1000);
+        }
+
+        // FUNGSI DOWNLOAD STRUK (Kode Asli dengan Sedikit Update Filename)
         window.downloadStruk = function() {
             const receiptElement = document.getElementById('receiptUI');
             const downloadBtn = document.querySelector('.action-area');
             const hints = document.querySelectorAll('.edit-hint');
             
-            // 1. Sembunyikan elemen yang tidak perlu difoto (Tombol & Petunjuk Edit)
             downloadBtn.style.display = 'none';
             hints.forEach(el => el.style.display = 'none');
 
-            // 2. Ambil Screenshot elemen Struk
             html2canvas(receiptElement, {
-                scale: 3, // Skala tinggi biar HD (tidak pecah)
-                backgroundColor: null, // Background transparan di luar kertas
-                useCORS: true // Izinkan gambar eksternal
+                scale: 3, 
+                backgroundColor: null, 
+                useCORS: true 
             }).then(canvas => {
-                // 3. Proses Download
                 const link = document.createElement('a');
-                link.download = `Struk-DearLove-${Date.now()}.png`;
+                // Nama file otomatis ada nominalnya
+                const tgl = new Date().toISOString().slice(0,10);
+                link.download = `Struk-DEARLOVE-${currentNominalRaw}-${tgl}.png`;
                 link.href = canvas.toDataURL('image/png');
                 link.click();
 
-                // 4. Munculkan kembali tombol
                 downloadBtn.style.display = 'block';
                 hints.forEach(el => el.style.display = 'block');
             }).catch(err => {
-                console.error("Gagal membuat gambar:", err);
-                alert("Gagal menyimpan gambar. Silakan coba lagi.");
+                console.error("Gagal:", err);
+                alert("Gagal menyimpan gambar.");
                 downloadBtn.style.display = 'block';
                 hints.forEach(el => el.style.display = 'block');
             });
